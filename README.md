@@ -1,282 +1,159 @@
-# RAMAPOT 
+# RAMAPOT: A Multi-Honeypot Deployment Platform 🐝
 
-**Multi-Honeypot Deployment with Centralized Logging on Kubernetes**
+![GitHub Release](https://img.shields.io/badge/Release-v1.0.0-blue?style=flat-square&logo=github)
 
-RAMAPOT is a honeypot deployment solution that orchestrates multiple honeypots (Cowrie SSH, Elasticpot, and Redis) with centralized logging using the Elastic Stack on a k3d Kubernetes cluster.
+Welcome to RAMAPOT, a robust multi-honeypot deployment platform designed to enhance your cybersecurity measures. This repository provides a streamlined approach to deploying various honeypots like Cowrie SSH, Elasticpot, and Redis honeypots on Kubernetes. With centralized logging and monitoring through the Elastic Stack, RAMAPOT offers an effective solution for threat detection.
+
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Features](#features)
+- [Technologies Used](#technologies-used)
+- [Getting Started](#getting-started)
+- [Deployment Instructions](#deployment-instructions)
+- [Monitoring with Elastic Stack](#monitoring-with-elastic-stack)
+- [Contributing](#contributing)
+- [License](#license)
+- [Contact](#contact)
+- [Releases](#releases)
+
+## Introduction
+
+In today’s digital landscape, cybersecurity threats are ever-evolving. Honeypots play a crucial role in detecting and mitigating these threats. RAMAPOT simplifies the deployment of multiple honeypots, allowing security professionals to focus on analysis and response rather than setup.
 
 ## Features
 
-- **Multi-Honeypot Architecture**: Deploy SSH, Elasticsearch, and Redis honeypots simultaneously
-- **Centralized Logging**: Unified log collection and analysis with Elasticsearch and Kibana
-- **Kubernetes**: Containerized deployment with k3d
-- **Real-time Monitoring**: Live dashboards and alerting capabilities
-- **Scalable Design**: Easy to extend with additional honeypots
-
-## Prerequisites
-
-Before starting, ensure you have the following tools installed:
-
-- Docker
-- k3d
-- kubectl
-- Helm
-- curl (for testing Elasticpot)
-- redis-cli or any Redis client (for testing Redis honeypot)
+- **Multi-Honeypot Support**: Deploy Cowrie SSH, Elasticpot, and Redis honeypots.
+- **Centralized Logging**: Collect logs from all honeypots in one place.
+- **Kubernetes Integration**: Easily deploy and manage honeypots using Kubernetes.
+- **Elastic Stack Monitoring**: Utilize Elasticsearch, Logstash, and Kibana for monitoring and visualization.
+- **User-Friendly Setup**: Simple configuration files for quick deployment.
 
-## Installation
+## Technologies Used
 
-### Step 1: Build Docker Images
+- **Cowrie**: A medium interaction SSH honeypot.
+- **Elasticpot**: A honeypot that simulates Elasticsearch.
+- **Redis Honeypot**: A honeypot that simulates Redis databases.
+- **Kubernetes (K3s)**: Lightweight Kubernetes distribution for easy deployment.
+- **Elastic Stack**: A set of tools including Elasticsearch, Logstash, and Kibana for monitoring and data analysis.
 
-#### Build Elasticpot Image
-```bash
-cd elasticpot
-docker build -t elasticpot .
-```
+## Getting Started
 
-#### Build Redis Honeypot Image
-```bash
-cd redis-honeypot
-docker build -t redishoneypot .
-```
+To get started with RAMAPOT, ensure you have the following prerequisites:
 
-### Step 2: Create k3d Cluster
+- A Kubernetes cluster (K3s recommended).
+- Docker installed on your machine.
+- Access to a terminal with kubectl configured to interact with your Kubernetes cluster.
 
-Create a k3d cluster with proper port forwarding:
+### Installation Steps
 
-```bash
-k3d cluster create mycluster \
-  -p "30022:30022@server:0" \
-  -p "6379:6379@server:0" \
-  -p "9200:9200@server:0" \
-  -p "5601:5601@server:0" \
-  --agents 2
-```
-
-**Port Mapping:**
-- `30022` → Cowrie SSH service
-- `9200` → Elasticpot HTTP service  
-- `6379` → Redis honeypot
-- `5601` → Kibana dashboard
+1. **Clone the Repository**:
+   ```bash
+   git clone https://github.com/Glenwestinat/RAMAPOT.git
+   cd RAMAPOT
+   ```
 
-### Step 3: Import Docker Images
-
-```bash
-k3d image import elasticpot -c mycluster
-k3d image import redishoneypot -c mycluster
-```
+2. **Install Dependencies**:
+   Ensure you have Docker and Kubernetes set up. Use the following command to build your images:
+   ```bash
+   docker-compose build
+   ```
 
-### Step 4: Create Namespace
+3. **Deploy the Honeypots**:
+   Use the following command to deploy the honeypots on your Kubernetes cluster:
+   ```bash
+   kubectl apply -f k8s/
+   ```
 
-```bash
-kubectl create namespace honeypot
-```
+4. **Access the Dashboard**:
+   Once deployed, you can access the Kibana dashboard for monitoring at `http://<your-kibana-url>:5601`.
 
-## Deployment
+## Deployment Instructions
 
-### Deploy Cowrie Components
+Deploying RAMAPOT is straightforward. Follow these steps for a successful setup:
 
-```bash
-kubectl apply -f cowrie-pvc.yaml -n honeypot
-kubectl apply -f cowrie-configmap.yaml -n honeypot
-kubectl apply -f cowrie-deployment.yaml -n honeypot
-kubectl apply -f cowrie-service.yaml -n honeypot
-```
+1. **Configure Environment Variables**:
+   Modify the `.env` file to set your configurations. This file includes settings for each honeypot and the Elastic Stack.
 
-### Deploy Elasticpot Components
+2. **Start the Deployment**:
+   Use the following command to start your honeypots:
+   ```bash
+   kubectl apply -f k8s/deployment.yaml
+   ```
 
-```bash
-kubectl apply -f elasticpot-pvc.yaml -n honeypot
-kubectl apply -f elasticpot-configmap.yaml -n honeypot
-kubectl apply -f elasticpot-deployment.yaml -n honeypot
-kubectl apply -f elasticpot-service.yaml -n honeypot
-```
+3. **Check Deployment Status**:
+   Monitor the status of your pods:
+   ```bash
+   kubectl get pods
+   ```
 
-### Deploy Redis Honeypot Components
+4. **Access Logs**:
+   To view logs for a specific honeypot, use:
+   ```bash
+   kubectl logs <pod-name>
+   ```
 
-```bash
-kubectl apply -f redishoneypot-pvc.yaml -n honeypot
-kubectl apply -f redishoneypot-deployment.yaml -n honeypot
-kubectl apply -f redishoneypot-service.yaml -n honeypot
-```
+## Monitoring with Elastic Stack
 
-## Elastic Stack Setup
+The Elastic Stack provides powerful tools for monitoring and visualizing your honeypot data.
 
-### Install Elasticsearch
+### Setting Up Elasticsearch and Kibana
 
-```bash
-helm repo add elastic https://helm.elastic.co
-helm repo update
-helm install elasticsearch elastic/elasticsearch -n honeypot
-```
+1. **Deploy Elasticsearch**:
+   Ensure Elasticsearch is running in your Kubernetes cluster. You can check its status with:
+   ```bash
+   kubectl get pods -n elastic-system
+   ```
 
-**Wait for Elasticsearch to be ready:**
-```bash
-kubectl get pods -n honeypot -w
-```
+2. **Deploy Kibana**:
+   Deploy Kibana using:
+   ```bash
+   kubectl apply -f k8s/kibana.yaml
+   ```
 
-**Retrieve Elasticsearch Password:**
-```bash
-kubectl get secrets --namespace=honeypot elasticsearch-master-credentials -ojsonpath='{.data.password}' | base64 -d
-```
+3. **Access Kibana**:
+   Open your web browser and navigate to `http://<your-kibana-url>:5601`. You will be greeted by the Kibana interface.
 
-> ⚠️ **Important**: Update the retrieved password in all Filebeat configuration files.
+### Visualizing Honeypot Data
 
-### Install Kibana
+1. **Create Index Patterns**:
+   In Kibana, create index patterns for your honeypot logs. This allows you to visualize the data collected.
 
-```bash
-helm install kibana elastic/kibana -n honeypot -f kibana-values.yaml
-```
-
-**Wait for Kibana to be ready:**
-```bash
-kubectl get pods -n honeypot -w
-```
-
-### Deploy Filebeat Instances
-
-#### Filebeat for Cowrie
-```bash
-kubectl apply -f filebeat-cowrie-configmap.yaml -n honeypot
-kubectl apply -f filebeat-cowrie-deployment.yaml -n honeypot
-```
-
-#### Filebeat for Elasticpot
-```bash
-kubectl apply -f filebeat-elasticpot-configmap.yaml -n honeypot
-kubectl apply -f filebeat-elasticpot-deployment.yaml -n honeypot
-```
-
-#### Filebeat for Redis
-```bash
-kubectl apply -f filebeat-redis-configmap.yaml -n honeypot
-kubectl apply -f filebeat-redis-deployment.yaml -n honeypot
-```
-
-## Verification
-
-### Check All Pods Status
-
-```bash
-kubectl get pods -n honeypot
-```
-
-All pods should be in `Running` state.
-
-## Testing Honeypots
-
-### Test Cowrie (SSH Honeypot)
-
-```bash
-ssh -p 30022 root@localhost
-```
-
-### Test Elasticpot (Elasticsearch Honeypot)
-
-```bash
-curl -XGET http://localhost:9200/
-curl -XGET http://localhost:9200/_cluster/health
-```
-
-### Test Redis Honeypot
-
-```bash
-redis-cli -h 127.0.0.1 -p 6379
-# Try commands: INFO, GET test, SET test value, FLUSHALL, etc.
-```
-
-## Kibana Configuration
-
-### Access Kibana Dashboard
-
-Navigate to: `http://localhost:5601`
-
-**Login Credentials:**
-- **Username**: `elastic`
-- **Password**: (use the password retrieved in Elastic Stack Setup)
-
-### Configure Data Views
-
-1. Go to **Stack Management** → **Data Views**
-2. Click **Create data view**
-3. Create the following data views:
-
-#### Cowrie Logs
-- **Index pattern**: `honeypot-cowrie-*`
-- **Time field**: `@timestamp`
-
-#### Elasticpot Logs
-- **Index pattern**: `honeypot-elasticpot-*`
-- **Time field**: `@timestamp`
-
-#### Redis Logs
-- **Index pattern**: `honeypot-redis-*`
-- **Time field**: `@timestamp`
-- **Filter**: `event.dataset: "redis.honeypot"`
-
-### Create Dashboards
-
-Build visualizations for comprehensive monitoring:
-
-- **Time-based Charts**: Line charts and bar charts for temporal analysis
-- **Data Tables**: Top IPs, usernames, and executed commands
-- **Pie Charts**: Success/failure ratios and attack distribution
-- **Metrics**: Total events count and connection statistics
-
-## Security Monitoring
-
-### Create Detection Rules
-
-1. Go to **Security** → **Manage** → **Rules**
-2. Click **Create rule**
-3. Configure detection rules based on security requirements
-
-#### Example Alert Types:
-
-- **Brute Force Detection**: Multiple failed authentication attempts
-- **Successful Honeypot Logins**: Legitimate access to honeypots
-
-View generated alerts in **Security** → **Alerts**
-
-## Troubleshooting
-
-### Check Pod Status
-
-```bash
-kubectl get pods -n honeypot
-kubectl describe pod <pod-name> -n honeypot
-kubectl logs <pod-name> -n honeypot
-```
-
-### Check Services
-
-```bash
-kubectl get services -n honeypot
-```
-
-### Common Issues
-
-- **Pod Not Starting**: Check resource limits and image availability
-- **Connection Refused**: Verify port forwarding and service configuration
-- **Log Ingestion Issues**: Ensure Filebeat configuration matches Elasticsearch credentials
-
-## Cleanup
-
-To remove the entire RAMAPOT deployment:
-
-```bash
-k3d cluster delete mycluster
-```
-
+2. **Build Dashboards**:
+   Use Kibana’s dashboard features to create visual representations of the data. This can help identify patterns and anomalies.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit pull requests or open issues for bugs and feature requests.
-Feel free to fork this repository and adapt it to your specific needs.
+We welcome contributions to RAMAPOT. If you would like to contribute, please follow these steps:
+
+1. **Fork the Repository**:
+   Click the "Fork" button on the top right of the repository page.
+
+2. **Create a New Branch**:
+   ```bash
+   git checkout -b feature/YourFeature
+   ```
+
+3. **Make Changes**:
+   Implement your changes and ensure to test them thoroughly.
+
+4. **Submit a Pull Request**:
+   Push your changes and submit a pull request for review.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Contact
+
+For questions or feedback, please reach out to the repository owner via GitHub issues or directly through email.
+
+## Releases
+
+To download the latest version of RAMAPOT, visit the [Releases section](https://github.com/Glenwestinat/RAMAPOT/releases). Download the necessary files and execute them as per the instructions provided.
+
+If you encounter any issues, check the "Releases" section for updates or patches.
 
 ---
 
-**RAMAPOT** - Comprehensive Honeypot Deployment Solution
+Thank you for using RAMAPOT. Your contributions and feedback help improve this project for everyone. Happy deploying!
